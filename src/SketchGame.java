@@ -5,8 +5,7 @@ public class SketchGame extends Thread {
 
     private static int gameID = 0;
 
-    private ArrayList<Client> players = new ArrayList<>();
-    private int numPlayers = 0;
+    private final ArrayList<Client> players = new ArrayList<>();
 
     private Client currentArtist;
 
@@ -25,7 +24,7 @@ public class SketchGame extends Thread {
     }
 
     public int getNumPlayers() {
-        return numPlayers;
+        return players.size();
     }
 
     public void close() {
@@ -37,5 +36,9 @@ public class SketchGame extends Thread {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+    }
+
+    public ArrayList<Client> getPlayers() {
+        return players;
     }
 }

@@ -17,6 +17,7 @@ public class Server {
     }
 
     private static void start() {
+        System.out.println("Starting server...");
         // set up console interface
         Thread consoleThread = new Thread(new Console(), "ConsoleThread");
         consoleThread.start();
@@ -29,6 +30,7 @@ public class Server {
             System.err.println("Cannot launch server!");
             return;
         }
+        System.out.println("Waiting for clients...");
         isRunning = true;
         while (isRunning()) {
             try {
@@ -52,6 +54,7 @@ public class Server {
                 e.printStackTrace();
             }
         }
+        System.out.println("Closing...");
         for (SketchGame sg: games) {
             sg.close();
         }
@@ -69,5 +72,9 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static ArrayList<SketchGame> getGames() {
+        return games;
     }
 }

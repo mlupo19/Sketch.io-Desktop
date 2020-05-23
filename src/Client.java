@@ -10,7 +10,7 @@ public class Client extends Thread {
     private String name;
     private DataInputStream dis;
     private DataOutputStream dos;
-    private Socket socket;
+    private final Socket socket;
 
     private static final ArrayList<Integer> ids = new ArrayList<>();
 
@@ -20,21 +20,15 @@ public class Client extends Thread {
             this.dis = new DataInputStream(socket.getInputStream());
             this.dos = new DataOutputStream(socket.getOutputStream());
             this.name = dis.readUTF();
-            int id = 0;
-            while(!ids.contains(id)) {
-                id = (int) (Math.random() * 100) + 50;
-            }
-            this.id = id;
-
             dos.writeUTF("Welcome Client " + id);
             dos.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        setName("ClientThread-" + id);
     }
 
     public void close() {
+        System.out.println("Disconnecting client " + id);
         ids.remove(new Integer(id));
         try {
             socket.close();
@@ -50,6 +44,12 @@ public class Client extends Thread {
 
     Client(Socket socket) {
         this.socket = socket;
+        int id = (int) (Math.random() * 100) + 50;
+        while(ids.contains(id)) {
+            id = (int) (Math.random() * 100) + 50;
+        }
+        this.id = id;
+        setName("ClientThread-" + id);
         start();
     }
 
