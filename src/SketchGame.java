@@ -4,17 +4,40 @@ import java.util.ArrayList;
 public class SketchGame extends Thread {
 
     private static int gameID = 0;
+    private int thisGameID;
 
     private final ArrayList<Client> players = new ArrayList<>();
 
     private Client currentArtist;
+    private boolean running = false;
 
     SketchGame() {
         super("GameThread-" + (++gameID));
+        thisGameID = gameID;
+        System.out.println("Creating game " + thisGameID);
     }
 
     @Override
     public void run() {
+        running = true;
+        while (running) {
+            String m;
+            synchronized (players) {
+                for (Client c : players) {
+                    if (c == null) {
+                        players.remove(c);
+                        continue;
+                    }
+                    m = c.get();
+                    if (m != null) {
+                        for (Client c1 : players) {
+                            c1.send(c.getClientName() + ": " + m);
+                            System.out.println(c.getClientName() + " (" + c.getClientId() + "): " + m);
+                        }
+                    }
+                }
+            }
+        }
 
     }
 
@@ -28,7 +51,9 @@ public class SketchGame extends Thread {
     }
 
     public void close() {
+        running = false;
         for (Client c : players) {
+            System.out.println("Disconnecting client " + c.getClientId());
             c.close();
         }
         try {

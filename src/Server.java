@@ -8,9 +8,9 @@ public class Server {
 
     private static ServerSocket serverSocket;
 
-    private static ArrayList<SketchGame> games = new ArrayList<>();
+    private static final ArrayList<SketchGame> games = new ArrayList<>();
 
-    private static boolean isRunning = false;
+    private static volatile boolean isRunning = false;
 
     public static void main(String[] args) {
         Server.start();
@@ -32,7 +32,7 @@ public class Server {
         }
         System.out.println("Waiting for clients...");
         isRunning = true;
-        while (isRunning()) {
+        while (isRunning) {
             try {
                 Socket socket = serverSocket.accept();
                 System.out.println("New client: " + socket.getInetAddress());
@@ -54,14 +54,10 @@ public class Server {
                 e.printStackTrace();
             }
         }
-        System.out.println("Closing...");
+        System.out.println("Shutting down...");
         for (SketchGame sg: games) {
             sg.close();
         }
-    }
-
-    private static boolean isRunning() {
-        return isRunning;
     }
 
 

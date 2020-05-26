@@ -5,7 +5,7 @@ public class Console implements Runnable {
     public void run() {
         Scanner scanner = new Scanner(System.in);
 
-        String command = "";
+        String command;
         boolean running = true;
         while (running) {
             command = scanner.nextLine().toLowerCase();
@@ -23,6 +23,5 @@ public class Console implements Runnable {
         System.out.println("exiting...");
         Server.stop();
         scanner.close();
-        Thread.currentThread().getThreadGroup().list();
     }
 }
