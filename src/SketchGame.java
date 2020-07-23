@@ -10,6 +10,7 @@ public class SketchGame extends Thread {
 
     private Client currentArtist;
     private boolean running = false;
+    private String currentWord;
 
     SketchGame() {
         super("GameThread-" + (++gameID));
@@ -21,7 +22,7 @@ public class SketchGame extends Thread {
     public void run() {
         running = true;
         while (running) {
-            String m;
+            Message m;
             synchronized (players) {
                 for (Client c : players) {
                     if (c == null) {
@@ -31,7 +32,7 @@ public class SketchGame extends Thread {
                     m = c.get();
                     if (m != null) {
                         for (Client c1 : players) {
-                            c1.send(c.getClientName() + ": " + m);
+                            c1.send(m);
                             System.out.println(c.getClientName() + " (" + c.getClientId() + "): " + m);
                         }
                     }
@@ -55,6 +56,7 @@ public class SketchGame extends Thread {
         for (Client c : players) {
             System.out.println("Disconnecting client " + c.getClientId());
             c.close();
+
         }
         try {
             join();

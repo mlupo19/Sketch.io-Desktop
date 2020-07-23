@@ -9,6 +9,7 @@ public class Console implements Runnable {
         boolean running = true;
         while (running) {
             command = scanner.nextLine().toLowerCase();
+
             if (command.equals("exit"))
                 running = false;
             if (command.equals("threads"))

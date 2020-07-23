@@ -1,7 +1,4 @@
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
 
@@ -9,30 +6,31 @@ public class Client extends Thread {
 
     private final int id;
     private String name;
-    private DataInputStream dis;
-    private DataOutputStream dos;
+    private ObjectInputStream ois;
+    private ObjectOutputStream oos;
     private final Socket socket;
 
     private static final ArrayList<Integer> ids = new ArrayList<>();
     private boolean running = false;
 
-    private String message = null;
+    private Message message = null;
 
     @Override
     public void run() {
         try {
-            this.dis = new DataInputStream(socket.getInputStream());
-            this.dos = new DataOutputStream(socket.getOutputStream());
-            this.name = dis.readUTF();
-            dos.writeUTF("Welcome " + name);
-            dos.flush();
+            this.ois = new ObjectInputStream(socket.getInputStream());
+            this.oos = new ObjectOutputStream(socket.getOutputStream());
+            this.name = ois.readUTF();
+            oos.writeUTF("Welcome " + name);
+            System.out.println("Welcome " + name);
+            oos.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
         running = true;
         while (running) {
             try {
-                message = dis.readUTF();
+                message = (Message) ois.readObject();
             } catch (EOFException eofe) {
                 System.out.println("Client " + id + " disconnected");
                 close();
@@ -42,6 +40,8 @@ public class Client extends Thread {
                 e.printStackTrace();
                 close();
                 break;
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
             }
 
         }
@@ -76,19 +76,20 @@ public class Client extends Thread {
         start();
     }
 
-    public String get() {
+    public Message get() {
         if (message != null) {
-            String out = message;
+            Message out = message;
             message = null;
             return out;
         }
         return null;
     }
 
-    public void send(String message) {
+    public void send(Message message) {
         try {
-            dos.writeUTF(message);
-            dos.flush();
+            oos.writeObject(message);
+            oos.flush();
+            oos.reset();
         } catch (IOException e) {
             e.printStackTrace();
         }
