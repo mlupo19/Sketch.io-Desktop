@@ -1,3 +1,11 @@
+import javax.swing.*;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
+import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -21,14 +29,21 @@ public class SketchIO {
     private volatile static boolean guessedWord = false;
     private static String name;
 
+    private static JFrame frame;
+    private static JPanel panel;
+    private static JTextPane chat;
+    private static JTextField chatBox;
+
     public static void start(InetAddress serverAddress, int port, String name) {
         if (status)
             return;
+        buildGUI();
         status = true;
         System.out.println("Starting client...");
         SketchIO.name= name;
         SketchIO.serverAddress = serverAddress;
         SketchIO.port = port;
+
 
         try {
             socket = new Socket(serverAddress, port);
@@ -103,27 +118,47 @@ public class SketchIO {
         stop();
     }
 
+    private static void printToChat(String message) {
+        printToChat(message, Color.BLACK);
+    }
+
+    private static void printToChat(String message, Color color) {
+        StyleContext sc = StyleContext.getDefaultStyleContext();
+        AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, color);
+        synchronized (chat) {
+            int len = chat.getDocument().getLength();
+            chat.setCaretPosition(len);
+            chat.setCharacterAttributes(aset, false);
+            chat.replaceSelection(message + "\n");
+        }
+    }
+
     private static void processMessage(Message message) {
         if (message.getCommand() != null) {
             switch (message.getCommand()) {
                 case "new round":
                     guessedWord = false;
+                    setWordLabel(message.getMessage());
                     if (message.getName() != null) {
-                        System.out.println(message.getName() + " is the new artist.\n" + message.getMessage());
+                        printToChat(message.getName() + " is the new artist.\n");
                     } else {
-                        System.out.println("You have been chosen as the next artist.\nYour word is \"" + message.getMessage() + "\".");
+                        printToChat("You have been chosen as the next artist.\nYour word is \"" + message.getMessage() + "\".");
                     }
                     break;
                 case "guessed word":
                     guessedWord = true;
-                    System.out.println("Correct!");
+                    printToChat("Correct!", Color.GREEN);
                     break;
                 case "person joined":
 
             }
         } else {
-            System.out.println(message.getName() + ": " + message.getMessage());
+            printToChat(message.getName() + ": " + message.getMessage());
         }
+    }
+
+    private static void setWordLabel(String newWord) {
+
     }
 
 
@@ -142,6 +177,39 @@ public class SketchIO {
             e.printStackTrace();
         }
         System.exit(0);
+    }
+
+    private static void buildGUI() {
+        frame = new JFrame("Sketch.IO");
+        panel = new JPanel();
+        panel.setBackground(Color.WHITE);
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        frame.setSize(screen.width * 2 / 3, screen.height * 2 / 3);
+        frame.add(panel);
+        chat = new JTextPane();
+        chatBox = new JTextField();
+        chatBox.setPreferredSize(new Dimension(frame.getWidth() / 3, frame.getHeight() / 3 - 10));
+
+        JPanel chatPanel = new JPanel();
+        chatPanel.setLayout(new BorderLayout());
+        JScrollPane scrollPane = new JScrollPane(chat);
+        scrollPane.setPreferredSize(new Dimension(frame.getWidth() / 3, frame.getHeight() * 2 / 3 - 10));
+        chatPanel.add(scrollPane, BorderLayout.PAGE_START);
+        chatPanel.add(chatBox, BorderLayout.PAGE_END);
+        panel.setLayout(new BorderLayout());
+        panel.add(chatPanel, BorderLayout.LINE_END);
+
+
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        frame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                stop();
+            }
+        });
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
     }
 
 }
