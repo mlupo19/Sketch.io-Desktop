@@ -1,5 +1,5 @@
 # SketchIOServer
-Server for Sketch.io, my clone of the game Skribbl.io
+Server and client for Sketch.io, my clone of the game Skribbl.io
 
 TODO:
 - add GUI for server
