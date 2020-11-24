@@ -1,11 +1,11 @@
 import javax.swing.*;
-import javax.swing.text.AttributeSet;
-import javax.swing.text.SimpleAttributeSet;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyleContext;
+import javax.swing.text.*;
 import java.awt.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.font.TextAttribute;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -13,6 +13,8 @@ import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 public class SketchIO {
@@ -33,6 +35,7 @@ public class SketchIO {
     private static JPanel panel;
     private static JTextPane chat;
     private static JTextField chatBox;
+    private static JLabel wordLabel;
 
     public static void start(InetAddress serverAddress, int port, String name) {
         if (status)
@@ -126,10 +129,11 @@ public class SketchIO {
         StyleContext sc = StyleContext.getDefaultStyleContext();
         AttributeSet aset = sc.addAttribute(SimpleAttributeSet.EMPTY, StyleConstants.Foreground, color);
         synchronized (chat) {
-            int len = chat.getDocument().getLength();
-            chat.setCaretPosition(len);
-            chat.setCharacterAttributes(aset, false);
-            chat.replaceSelection(message + "\n");
+            try {
+                chat.getStyledDocument().insertString(chat.getDocument().getLength(), message + "\n", aset);
+            } catch (BadLocationException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -140,7 +144,7 @@ public class SketchIO {
                     guessedWord = false;
                     setWordLabel(message.getMessage());
                     if (message.getName() != null) {
-                        printToChat(message.getName() + " is the new artist.\n");
+                        printToChat(message.getName() + " is the new artist.");
                     } else {
                         printToChat("You have been chosen as the next artist.\nYour word is \"" + message.getMessage() + "\".");
                     }
@@ -149,8 +153,9 @@ public class SketchIO {
                     guessedWord = true;
                     printToChat("Correct!", Color.GREEN);
                     break;
-                case "person joined":
-
+                case "player joined":
+                    printToChat(message.getName() + " has joined the game.", Color.BLUE);
+                    break;
             }
         } else {
             printToChat(message.getName() + ": " + message.getMessage());
@@ -158,7 +163,7 @@ public class SketchIO {
     }
 
     private static void setWordLabel(String newWord) {
-
+        wordLabel.setText(newWord);
     }
 
 
@@ -187,8 +192,22 @@ public class SketchIO {
         frame.setSize(screen.width * 2 / 3, screen.height * 2 / 3);
         frame.add(panel);
         chat = new JTextPane();
+        chat.setEditable(false);
         chatBox = new JTextField();
         chatBox.setPreferredSize(new Dimension(frame.getWidth() / 3, frame.getHeight() / 3 - 10));
+        chatBox.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                super.keyReleased(e);
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    message = chatBox.getText();
+                    synchronized (writeLock) {
+                        writeLock.notifyAll();
+                    }
+                    chatBox.setText("");
+                }
+            }
+        });
 
         JPanel chatPanel = new JPanel();
         chatPanel.setLayout(new BorderLayout());
@@ -199,6 +218,13 @@ public class SketchIO {
         panel.setLayout(new BorderLayout());
         panel.add(chatPanel, BorderLayout.LINE_END);
 
+        wordLabel = new JLabel("_");
+        Map<TextAttribute, Object> attributes = new HashMap<>();
+        attributes.put(TextAttribute.TRACKING, 0.3);
+
+        wordLabel.setFont(wordLabel.getFont().deriveFont(24.0f).deriveFont(attributes));
+        wordLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        panel.add(wordLabel, BorderLayout.PAGE_START);
 
         frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {

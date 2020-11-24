@@ -38,15 +38,12 @@ public class SketchGame {
                             if (inRound) {
                                 if (m.getMessage().toLowerCase().equals(currentWord.toLowerCase())) {
                                     c.send(new Message(null, null, currentWord, "guessed word"));
-
                                     continue;
                                 }
 
                             }
                             for (Client c1 : players) {
-                                if (!c.equals(c1)) {
-                                    c1.send(m);
-                                }
+                                c1.send(m);
                             }
                         }
                     }
@@ -117,11 +114,7 @@ public class SketchGame {
         List<Client> exc = Arrays.asList(exceptions);
         synchronized (players) {
             for (Client c : players) {
-                if (c == null) {
-                    players.remove(c);
-                    continue;
-                }
-                if (!exc.contains(c))
+                if (!exc.contains(c) && c.isAlive())
                     c.send(m);
             }
         }

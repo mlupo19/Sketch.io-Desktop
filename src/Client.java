@@ -46,6 +46,7 @@ public class Client {
                 this.oos = new ObjectOutputStream(socket.getOutputStream());
                 this.name = ois.readUTF();
                 System.out.println(name + " @ " + socket.getInetAddress().getHostName() + " joined");
+                Server.getGameByID(this.gameId).sendMessageToPlayers(new Message(getName(), null, null, "player joined"));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -87,6 +88,7 @@ public class Client {
             oos.flush();
             oos.reset();
         } catch (IOException e) {
+            System.err.println(name);
             e.printStackTrace();
         }
     }
