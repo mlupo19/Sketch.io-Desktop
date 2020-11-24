@@ -3,12 +3,15 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class Server {
 
     private static ServerSocket serverSocket;
 
-    private static final ArrayList<SketchGame> games = new ArrayList<>();
+    private static final Map<Integer, SketchGame> games = new HashMap<>();
 
     private static volatile boolean isRunning = false;
 
@@ -35,9 +38,8 @@ public class Server {
         while (isRunning) {
             try {
                 Socket socket = serverSocket.accept();
-                System.out.println("New client: " + socket.getInetAddress());
                 boolean gameFound = false;
-                for (SketchGame sg : games) {
+                for (SketchGame sg : games.values()) {
                     if (sg.getNumPlayers() < 6) {
                         sg.addPlayer(socket);
                         gameFound = true;
@@ -47,7 +49,7 @@ public class Server {
                     SketchGame newGame = new SketchGame();
                     newGame.start();
                     newGame.addPlayer(socket);
-                    games.add(newGame);
+                    games.put(newGame.getID(), newGame);
                 }
             } catch(SocketException ignored) {
             } catch (IOException e) {
@@ -55,11 +57,14 @@ public class Server {
             }
         }
         System.out.println("Shutting down...");
-        for (SketchGame sg: games) {
+        for (SketchGame sg: games.values()) {
             sg.close();
         }
     }
 
+    public static SketchGame getGameByID(int id) {
+        return games.get(id);
+    }
 
     public static void stop() {
         isRunning = false;
@@ -70,7 +75,7 @@ public class Server {
         }
     }
 
-    public static ArrayList<SketchGame> getGames() {
-        return games;
+    public static List<SketchGame> getGames() {
+        return new ArrayList<>(games.values());
     }
 }

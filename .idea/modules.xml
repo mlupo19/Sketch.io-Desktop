@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/SketchIOClient/SketchIOClient.iml" filepath="$PROJECT_DIR$/SketchIOClient/SketchIOClient.iml" />
       <module fileurl="file://$PROJECT_DIR$/SketchIOServer.iml" filepath="$PROJECT_DIR$/SketchIOServer.iml" />
     </modules>
   </component>

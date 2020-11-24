@@ -1,79 +1,75 @@
 import java.io.*;
 import java.net.Socket;
-import java.util.ArrayList;
+import java.net.SocketException;
+import java.util.HashMap;
+import java.util.Map;
 
-public class Client extends Thread {
+public class Client {
 
     private final int id;
     private String name;
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
     private final Socket socket;
+    private int gameId = -1;
+    private final Thread clientThread;
 
-    private static final ArrayList<Integer> ids = new ArrayList<>();
-    private boolean running = false;
+    private static final Map<Integer, Client> ids = new HashMap<>();
 
     private Message message = null;
 
-    @Override
-    public void run() {
-        try {
-            this.ois = new ObjectInputStream(socket.getInputStream());
-            this.oos = new ObjectOutputStream(socket.getOutputStream());
-            this.name = ois.readUTF();
-            oos.writeUTF("Welcome " + name);
-            System.out.println("Welcome " + name);
-            oos.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        running = true;
-        while (running) {
-            try {
-                message = (Message) ois.readObject();
-            } catch (EOFException eofe) {
-                System.out.println("Client " + id + " disconnected");
-                close();
-                break;
-            } catch (IOException e) {
-                System.out.println("Error - Disconnecting client " + id);
-                e.printStackTrace();
-                close();
-                break;
-            } catch (ClassNotFoundException e) {
-                e.printStackTrace();
-            }
-
-        }
-
-    }
-
+    private Runnable runnable;
 
 
     public void close() {
-        running = false;
-        ids.remove(new Integer(id));
+        ids.remove(id);
         try {
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        try {
-            join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        clientThread.interrupt();
     }
 
-    Client(Socket socket) {
+    Client(Socket socket, int gameId) {
         this.socket = socket;
+        this.gameId = gameId;
         int id = (int) (Math.random() * 100) + 50;
-        while(ids.contains(id)) {
+        while(ids.get(id) != null) {
             id = (int) (Math.random() * 100) + 50;
         }
         this.id = id;
-        setName("ClientThread-" + id);
-        start();
+        ids.put(id, this);
+        runnable = () -> {
+            try {
+                this.ois = new ObjectInputStream(socket.getInputStream());
+                this.oos = new ObjectOutputStream(socket.getOutputStream());
+                this.name = ois.readUTF();
+                System.out.println(name + " @ " + socket.getInetAddress().getHostName() + " joined");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            while (!Thread.interrupted()) {
+                try {
+                    message = (Message) ois.readObject();
+                } catch (SocketException e) {
+                    break;
+                } catch (EOFException eofe) {
+                    System.out.println("Client " + this.id + " disconnected");
+                    break;
+                } catch (IOException e) {
+                    System.out.println("Error - Disconnecting client " + this.id);
+                    e.printStackTrace();
+                    break;
+                } catch (ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+            Server.getGameByID(gameId).removePlayer(this);
+            close();
+        };
+        clientThread = new Thread(runnable, "ClientThread-" + id);
+        clientThread.start();
     }
 
     public Message get() {
@@ -95,11 +91,23 @@ public class Client extends Thread {
         }
     }
 
-    public int getClientId() {
+    public int getId() {
         return id;
     }
 
-    public String getClientName() {
+    public String getName() {
         return name;
+    }
+
+    public int getCurrentGameId() {
+        return gameId;
+    }
+
+    public String toString() {
+        return name + " (" + id + ")";
+    }
+
+    public boolean isAlive() {
+        return clientThread.isAlive();
     }
 }

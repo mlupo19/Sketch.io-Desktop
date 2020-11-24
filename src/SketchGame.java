@@ -1,71 +1,145 @@
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Random;
 
-public class SketchGame extends Thread {
+public class SketchGame {
 
     private static int gameID = 0;
-    private int thisGameID;
+    private final int thisGameID;
 
     private final ArrayList<Client> players = new ArrayList<>();
 
+    private int round = 1;
+    private volatile boolean inRound = false;
     private Client currentArtist;
-    private boolean running = false;
     private String currentWord;
+    private Thread helperThread;
+    private final Thread mainThread;
+    private final Runnable helperRunnable = () -> {
+        newRound();
+        System.out.println();
+    };
 
-    SketchGame() {
-        super("GameThread-" + (++gameID));
-        thisGameID = gameID;
-        System.out.println("Creating game " + thisGameID);
-    }
+    private final Runnable runnable = () -> {
+        try {
+            while (!Thread.interrupted()) {
+                Message m;
+                synchronized (players) {
+                    for (Client c : players) {
+                        if (c == null || !c.isAlive()) {
+                            players.remove(c);
+                            continue;
+                        }
+                        m = c.get();
+                        if (m != null) {
+                            System.out.println(c.getName() + " (" + c.getId() + "): " + m.getMessage());
+                            if (inRound) {
+                                if (m.getMessage().toLowerCase().equals(currentWord.toLowerCase())) {
+                                    c.send(new Message(null, null, currentWord, "guessed word"));
 
-    @Override
-    public void run() {
-        running = true;
-        while (running) {
-            Message m;
-            synchronized (players) {
-                for (Client c : players) {
-                    if (c == null) {
-                        players.remove(c);
-                        continue;
-                    }
-                    m = c.get();
-                    if (m != null) {
-                        for (Client c1 : players) {
-                            c1.send(m);
-                            System.out.println(c.getClientName() + " (" + c.getClientId() + "): " + m);
+                                    continue;
+                                }
+
+                            }
+                            for (Client c1 : players) {
+                                if (!c.equals(c1)) {
+                                    c1.send(m);
+                                }
+                            }
                         }
                     }
                 }
             }
+        } finally {
+            helperThread.interrupt();
         }
+    };
 
+    public void start() {
+        mainThread.start();
+    }
+
+    private void newRound() {
+        currentArtist = getRandomPlayer();
+        System.out.println("CurrentArtist: " + currentArtist);
+        currentWord = "Banana";
+        StringBuilder underlines = new StringBuilder();
+        for (int i = 0; i < currentWord.length(); i++) {
+            underlines.append("_");
+        }
+        currentArtist.send(new Message(null, null, currentWord, "new round"));
+        sendMessageToPlayers(new Message(currentArtist.getName(), null, underlines.toString(), "new round"), currentArtist);
+        inRound = true;
+    }
+
+    SketchGame() {
+        mainThread = new Thread(runnable, "GameThread-" + (++gameID));
+        thisGameID = gameID;
+        helperThread = new Thread(helperRunnable, "HelperThread-" + thisGameID);
+        System.out.println("Creating game " + thisGameID);
     }
 
     public void addPlayer(Socket socket) {
-        Client c = new Client(socket);
-        players.add(c);
+        Client c = new Client(socket, thisGameID);
+        synchronized (players) {
+            players.add(c);
+            if (players.size() > 2) {
+                helperThread.start();
+            }
+        }
+    }
+
+    public boolean removePlayer(Client c) {
+        synchronized (players) {
+            return players.remove(c);
+        }
     }
 
     public int getNumPlayers() {
-        return players.size();
+        synchronized (players) {
+            return players.size();
+        }
     }
 
     public void close() {
-        running = false;
-        for (Client c : players) {
-            System.out.println("Disconnecting client " + c.getClientId());
-            c.close();
-
+        synchronized (players) {
+            for (Client c : players) {
+                System.out.println("Disconnecting client " + c.getId());
+                c.close();
+            }
         }
-        try {
-            join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        mainThread.interrupt();
+    }
+
+    public void sendMessageToPlayers(Message m, Client... exceptions) {
+        List<Client> exc = Arrays.asList(exceptions);
+        synchronized (players) {
+            for (Client c : players) {
+                if (c == null) {
+                    players.remove(c);
+                    continue;
+                }
+                if (!exc.contains(c))
+                    c.send(m);
+            }
+        }
+    }
+
+    public Client getRandomPlayer() {
+        synchronized (players) {
+            return players.get(new Random().nextInt(players.size()));
         }
     }
 
     public ArrayList<Client> getPlayers() {
-        return players;
+        synchronized (players) {
+            return players;
+        }
+    }
+
+    public int getID() {
+        return thisGameID;
     }
 }
