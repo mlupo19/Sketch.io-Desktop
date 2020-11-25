@@ -13,6 +13,7 @@ public class SketchGame {
 
     private int round = 1;
     private volatile boolean inRound = false;
+    private final ArrayList<Client> guessedWord = new ArrayList<>();
     private Client currentArtist;
     private String currentWord;
     private Thread helperThread;
@@ -22,44 +23,14 @@ public class SketchGame {
         System.out.println();
     };
 
-    private final Runnable runnable = () -> {
-        try {
-            while (!Thread.interrupted()) {
-                Message m;
-                synchronized (players) {
-                    for (Client c : players) {
-                        if (c == null || !c.isAlive()) {
-                            players.remove(c);
-                            continue;
-                        }
-                        m = c.get();
-                        if (m != null) {
-                            System.out.println(c.getName() + " (" + c.getId() + "): " + m.getMessage());
-                            if (inRound) {
-                                if (m.getMessage().toLowerCase().equals(currentWord.toLowerCase())) {
-                                    c.send(new Message(null, null, currentWord, "guessed word"));
-                                    continue;
-                                }
-
-                            }
-                            for (Client c1 : players) {
-                                c1.send(m);
-                            }
-                        }
-                    }
-                }
-            }
-        } finally {
-            helperThread.interrupt();
-        }
-    };
-
     public void start() {
         mainThread.start();
     }
 
     private void newRound() {
+        guessedWord.clear();
         currentArtist = getRandomPlayer();
+        guessedWord.add(currentArtist);
         System.out.println("CurrentArtist: " + currentArtist);
         currentWord = "Banana";
         StringBuilder underlines = new StringBuilder();
@@ -72,6 +43,43 @@ public class SketchGame {
     }
 
     SketchGame() {
+        Runnable runnable = () -> {
+            try {
+                while (!Thread.interrupted()) {
+                    Message m;
+                    synchronized (players) {
+                        for (Client c : players) {
+                            if (c == null || !c.isAlive()) {
+                                players.remove(c);
+                                continue;
+                            }
+                            m = c.get();
+                            if (m != null) {
+                                System.out.println(c.getName() + " (" + c.getId() + "): " + m.getMessage());
+                                if (inRound) {
+                                    if (!guessedWord.contains(c) && m.getMessage().toLowerCase().equals(currentWord.toLowerCase())) {
+                                        guessedWord.add(c);
+                                        c.send(new Message(null, null, currentWord, "guessed word"));
+                                        sendMessageToPlayers(new Message(c.getName(), null, null, "guessed word"), c);
+                                        if (guessedWord.containsAll(players)) {
+                                            newRound();
+                                        }
+                                        continue;
+                                    }
+
+                                }
+                                for (Client c1 : players) {
+                                    if (!guessedWord.contains(c1) || c1.equals(currentArtist))
+                                        c1.send(m);
+                                }
+                            }
+                        }
+                    }
+                }
+            } finally {
+                helperThread.interrupt();
+            }
+        };
         mainThread = new Thread(runnable, "GameThread-" + (++gameID));
         thisGameID = gameID;
         helperThread = new Thread(helperRunnable, "HelperThread-" + thisGameID);

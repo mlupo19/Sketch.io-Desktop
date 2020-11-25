@@ -150,8 +150,12 @@ public class SketchIO {
                     }
                     break;
                 case "guessed word":
-                    guessedWord = true;
-                    printToChat("Correct!", Color.GREEN);
+                    if (message.getName() == null) {
+                        guessedWord = true;
+                        printToChat("Correct!", Color.GREEN);
+                    } else {
+                        printToChat(message.getName() + " guessed the word.", Color.GREEN);
+                    }
                     break;
                 case "player joined":
                     printToChat(message.getName() + " has joined the game.", Color.BLUE);

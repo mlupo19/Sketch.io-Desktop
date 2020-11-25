@@ -112,4 +112,10 @@ public class Client {
     public boolean isAlive() {
         return clientThread.isAlive();
     }
+
+    public boolean equals(Object o) {
+        if (!(o instanceof Client))
+            return false;
+        return id == ((Client) o).id;
+    }
 }
