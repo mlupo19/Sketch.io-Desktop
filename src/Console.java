@@ -43,13 +43,15 @@ public class Console implements Runnable {
                     }
                 }
                 if (command.length == 2 && command[0].equals("client")) {
-                    Client c = Client.getClientByID(Integer.parseInt(command[0]));
-                    if (c != null) {
-                        System.out.println(c.getName() + "(id: " + c.getId() + ")");
-                        System.out.println(c.getSocket().getInetAddress().getHostName());
-                        System.out.println(c.getSocket().getInetAddress());
-                        System.out.println("Current game: " + c.getCurrentGameId());
-                    }
+                    try {
+                        Client c = Client.getClientByID(Integer.parseInt(command[1]));
+                        if (c != null) {
+                            System.out.println(c.getName() + "(id: " + c.getId() + ")");
+                            System.out.println(c.getSocket().getInetAddress().getHostName());
+                            System.out.println(c.getSocket().getInetAddress().getHostAddress());
+                            System.out.println("Current game: " + c.getCurrentGameId());
+                        }
+                    } catch (NumberFormatException ignored){}
                 }
             }
         } catch (Exception e) {

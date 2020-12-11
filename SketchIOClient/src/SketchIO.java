@@ -47,18 +47,6 @@ public class SketchIO {
         SketchIO.serverAddress = serverAddress;
         SketchIO.port = port;
 
-
-        try {
-            socket = new Socket(serverAddress, port);
-            System.out.println("Connected!");
-            oos = new ObjectOutputStream(socket.getOutputStream());
-            ois = new ObjectInputStream(socket.getInputStream());
-        } catch (ConnectException ce) {
-            System.out.println("Failed to connect!");
-            System.exit(1);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         readThread = new Thread(() -> {
             while (!Thread.interrupted()) {
                 try {
@@ -107,6 +95,20 @@ public class SketchIO {
                 }
             }
         }, "WriteThread");
+
+        try {
+            socket = new Socket(serverAddress, port);
+            System.out.println("Connected!");
+            printToChat("Connected!");
+            oos = new ObjectOutputStream(socket.getOutputStream());
+            ois = new ObjectInputStream(socket.getInputStream());
+        } catch (ConnectException ce) {
+            System.out.println("Failed to connect!");
+            System.exit(1);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         consoleThread = Thread.currentThread();
         readThread.start();
         writeThread.start();
