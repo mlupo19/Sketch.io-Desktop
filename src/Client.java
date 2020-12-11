@@ -132,4 +132,8 @@ public class Client {
     public static Client getClientByID(int id) {
         return ids.get(id);
     }
+
+    public Socket getSocket() {
+        return socket;
+    }
 }

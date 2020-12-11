@@ -35,9 +35,20 @@ public class Console implements Runnable {
                     for (int i = 1; i < command.length; i++) {
                         try {
                             Client c = Client.getClientByID(Integer.parseInt(command[i]));
-                            Server.getGameByID(c.getCurrentGameId()).removePlayer(c);
-                            c.close();
+                            if (c != null) {
+                                Server.getGameByID(c.getCurrentGameId()).removePlayer(c);
+                                c.close();
+                            }
                         } catch (NumberFormatException ignored){}
+                    }
+                }
+                if (command.length == 2 && command[0].equals("client")) {
+                    Client c = Client.getClientByID(Integer.parseInt(command[0]));
+                    if (c != null) {
+                        System.out.println(c.getName() + "(id: " + c.getId() + ")");
+                        System.out.println(c.getSocket().getInetAddress().getHostName());
+                        System.out.println(c.getSocket().getInetAddress());
+                        System.out.println("Current game: " + c.getCurrentGameId());
                     }
                 }
             }
