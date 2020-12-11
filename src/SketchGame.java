@@ -67,16 +67,18 @@ public class SketchGame {
                             if (m != null) {
                                 System.out.println(c.getName() + " (" + c.getId() + "): " + m.getMessage());
                                 if (inRound) {
-                                    if (!guessedWord.contains(c) && m.getMessage().equalsIgnoreCase(currentWord)) {
-                                        guessedWord.add(c);
-                                        c.send(new Message(null, null, currentWord, "guessed word"));
-                                        sendMessageToPlayers(new Message(c.getName(), null, null, "guessed word"), c);
-                                        if (guessedWord.containsAll(players)) {
-                                            synchronized (roundLock) {
-                                                roundLock.notifyAll();
+                                    synchronized (guessedWord) {
+                                        if (!guessedWord.contains(c) && m.getMessage().equalsIgnoreCase(currentWord)) {
+                                            guessedWord.add(c);
+                                            c.send(new Message(null, null, currentWord, "guessed word"));
+                                            sendMessageToPlayers(new Message(c.getName(), null, null, "guessed word"), c);
+                                            if (guessedWord.containsAll(players)) {
+                                                synchronized (roundLock) {
+                                                    roundLock.notifyAll();
+                                                }
                                             }
+                                            continue;
                                         }
-                                        continue;
                                     }
 
                                 }
