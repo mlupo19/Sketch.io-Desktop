@@ -18,19 +18,20 @@ public class SketchGame {
     private String currentWord;
     private Thread helperThread;
     private final Thread mainThread;
-    private final Runnable helperRunnable = () -> {
-        newRound();
-        System.out.println();
-    };
+
+    private final Object roundLock = new Object();
 
     public void start() {
         mainThread.start();
     }
 
     private void newRound() {
-        guessedWord.clear();
+        round++;
         currentArtist = getRandomPlayer();
-        guessedWord.add(currentArtist);
+        synchronized (guessedWord) {
+            guessedWord.clear();
+            guessedWord.add(currentArtist);
+        }
         System.out.println("CurrentArtist: " + currentArtist);
         currentWord = "Banana";
         StringBuilder underlines = new StringBuilder();
@@ -40,6 +41,15 @@ public class SketchGame {
         currentArtist.send(new Message(null, null, currentWord, "new round"));
         sendMessageToPlayers(new Message(currentArtist.getName(), null, underlines.toString(), "new round"), currentArtist);
         inRound = true;
+
+        synchronized (roundLock) {
+            try {
+                roundLock.wait();
+            } catch (InterruptedException ignored) {
+                return;
+            }
+        }
+        newRound();
     }
 
     SketchGame() {
@@ -57,12 +67,14 @@ public class SketchGame {
                             if (m != null) {
                                 System.out.println(c.getName() + " (" + c.getId() + "): " + m.getMessage());
                                 if (inRound) {
-                                    if (!guessedWord.contains(c) && m.getMessage().toLowerCase().equals(currentWord.toLowerCase())) {
+                                    if (!guessedWord.contains(c) && m.getMessage().equalsIgnoreCase(currentWord)) {
                                         guessedWord.add(c);
                                         c.send(new Message(null, null, currentWord, "guessed word"));
                                         sendMessageToPlayers(new Message(c.getName(), null, null, "guessed word"), c);
                                         if (guessedWord.containsAll(players)) {
-                                            newRound();
+                                            synchronized (roundLock) {
+                                                roundLock.notifyAll();
+                                            }
                                         }
                                         continue;
                                     }
@@ -82,12 +94,15 @@ public class SketchGame {
         };
         mainThread = new Thread(runnable, "GameThread-" + (++gameID));
         thisGameID = gameID;
-        helperThread = new Thread(helperRunnable, "HelperThread-" + thisGameID);
+        helperThread = new Thread(this::newRound, "HelperThread-" + thisGameID);
         System.out.println("Creating game " + thisGameID);
     }
 
     public void addPlayer(Socket socket) {
-        Client c = new Client(socket, thisGameID);
+        new Client(socket, this);
+    }
+
+    public void onPlayerAdded(Client c) {
         synchronized (players) {
             players.add(c);
             if (players.size() > 2) {

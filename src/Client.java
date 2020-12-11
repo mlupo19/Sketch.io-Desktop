@@ -11,7 +11,8 @@ public class Client {
     private ObjectInputStream ois;
     private ObjectOutputStream oos;
     private final Socket socket;
-    private int gameId = -1;
+    private int gameId;
+    private SketchGame game;
     private final Thread clientThread;
 
     private static final Map<Integer, Client> ids = new HashMap<>();
@@ -31,9 +32,10 @@ public class Client {
         clientThread.interrupt();
     }
 
-    Client(Socket socket, int gameId) {
+    Client(Socket socket, SketchGame game) {
+        this.game = game;
         this.socket = socket;
-        this.gameId = gameId;
+        this.gameId = game != null ? game.getID() : -1;
         int id = (int) (Math.random() * 100) + 50;
         while(ids.get(id) != null) {
             id = (int) (Math.random() * 100) + 50;
@@ -47,6 +49,10 @@ public class Client {
                 this.name = ois.readUTF();
                 System.out.println(name + " @ " + socket.getInetAddress().getHostName() + " joined");
                 Server.getGameByID(this.gameId).sendMessageToPlayers(new Message(getName(), null, null, "player joined"));
+
+                if (game != null) {
+                    game.onPlayerAdded(this);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -105,6 +111,10 @@ public class Client {
         return gameId;
     }
 
+    public SketchGame getCurrentGame() {
+        return game;
+    }
+
     public String toString() {
         return name + " (" + id + ")";
     }
@@ -117,5 +127,9 @@ public class Client {
         if (!(o instanceof Client))
             return false;
         return id == ((Client) o).id;
+    }
+
+    public static Client getClientByID(int id) {
+        return ids.get(id);
     }
 }

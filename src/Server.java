@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,7 +28,7 @@ public class Server {
 
         // allow clients to join
         try {
-            serverSocket = new ServerSocket(8080);
+            serverSocket = new ServerSocket(6969);
         } catch (IOException e) {
             e.printStackTrace();
             System.err.println("Cannot launch server!");
@@ -64,6 +65,10 @@ public class Server {
 
     public static SketchGame getGameByID(int id) {
         return games.get(id);
+    }
+
+    public static SketchGame removeGame(int id) {
+        return games.remove(id);
     }
 
     public static void stop() {

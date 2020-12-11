@@ -6,10 +6,10 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.font.TextAttribute;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
@@ -43,7 +43,7 @@ public class SketchIO {
         buildGUI();
         status = true;
         System.out.println("Starting client...");
-        SketchIO.name= name;
+        SketchIO.name = name;
         SketchIO.serverAddress = serverAddress;
         SketchIO.port = port;
 
@@ -53,9 +53,11 @@ public class SketchIO {
             System.out.println("Connected!");
             oos = new ObjectOutputStream(socket.getOutputStream());
             ois = new ObjectInputStream(socket.getInputStream());
+        } catch (ConnectException ce) {
+            System.out.println("Failed to connect!");
+            System.exit(1);
         } catch (IOException e) {
             e.printStackTrace();
-
         }
         readThread = new Thread(() -> {
             while (!Thread.interrupted()) {
@@ -182,7 +184,7 @@ public class SketchIO {
 
         try {
             socket.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         System.exit(0);
@@ -203,8 +205,7 @@ public class SketchIO {
             @Override
             public void keyReleased(KeyEvent e) {
                 super.keyReleased(e);
-                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    message = chatBox.getText();
+                if (e.getKeyCode() == KeyEvent.VK_ENTER && (message = chatBox.getText()) != null && !message.equals("")) {
                     synchronized (writeLock) {
                         writeLock.notifyAll();
                     }
@@ -240,6 +241,7 @@ public class SketchIO {
         });
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
+        chatBox.requestFocus();
     }
 
 }
